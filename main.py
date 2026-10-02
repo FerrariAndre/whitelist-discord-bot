@@ -2,18 +2,30 @@ import os
 import re
 import discord
 from dotenv import load_dotenv
+from mctools import RCONClient
 
 #Carrengado variaveis de ambiente
 load_dotenv()
 token_bot = os.getenv("DISCORD_TOKEN")
 channel_whitelist = int(os.getenv("WHITELIST_CHANNEL_ID"))
+rcon_password = os.getenv("RCON_PASSWORD")
+rcon_host = os.getenv("RCON_HOST")
+rcon_port = int(os.getenv("RCON_PORT"))
 
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 processed = set()
 
-
+if rcon_host <> '' and rcon_port is not None and rcon_password <> '':
+    print("Preenchidos")
+    rcon = RCONClient (rcon_host, rcon_port)
+    try:
+        rcon.login(rcon_password)
+        response = rcon.command("whitelist list")
+        print(response)
+    finally:
+        rcon.stop
 @client.event
 async def on_ready():
     print(f'Logado como {client.user}')
