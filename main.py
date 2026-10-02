@@ -11,6 +11,7 @@ channel_whitelist = int(os.getenv("WHITELIST_CHANNEL_ID"))
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
+processed = set()
 
 
 @client.event
@@ -21,7 +22,6 @@ async def on_ready():
 async def on_raw_reaction_add(payload):
     is_administrator = False
     channel = client.get_channel(payload.channel_id)
-
     if payload.member is None or payload.member.bot: return
 
     if channel is None or channel_whitelist != channel.id: return
@@ -47,9 +47,14 @@ async def on_raw_reaction_add(payload):
 
         if message.author.bot: return
 
-        nickname = message.content.strip()
-        if not validate_nickname(nickname): return
+        if message.id in processed:
+            print("Mensagem já processada")
+            return
 
+        nickname = message.content.strip()
+
+        if not validate_nickname(nickname): return
+        processed.add(message.id)
         print(f"Aprovação autorizada: nickname={nickname}, aprovador={payload.member.name}, idAprovador={payload.member.id}, idMensagem={message.id}")
 
 def validate_nickname(nickname):
