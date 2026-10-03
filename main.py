@@ -17,22 +17,13 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 processed = set()
 
-if rcon_host <> '' and rcon_port is not None and rcon_password <> '':
-    print("Preenchidos")
-    rcon = RCONClient (rcon_host, rcon_port)
-    try:
-        rcon.login(rcon_password)
-        response = rcon.command("whitelist list")
-        print(response)
-    finally:
-        rcon.stop
 @client.event
 async def on_ready():
     print(f'Logado como {client.user}')
 
 @client.event
 async def on_raw_reaction_add(payload):
-    is_administrator = False
+    has_permission = False
     channel = client.get_channel(payload.channel_id)
     if payload.member is None or payload.member.bot: return
 
@@ -40,11 +31,11 @@ async def on_raw_reaction_add(payload):
 
     roles = payload.member.roles
     for role in roles:
-        if role.permissions.administrator:
-            is_administrator = True
+        if role.permissions.administrator or role.id == 1552354818587103283:
+            has_permission = True
             break
 
-    if payload.emoji.name == "✅" and is_administrator:
+    if payload.emoji.name == "✅" and has_permission:
         try:
             message = await channel.fetch_message(payload.message_id)
         except discord.NotFound:
@@ -68,6 +59,12 @@ async def on_raw_reaction_add(payload):
         if not validate_nickname(nickname): return
         processed.add(message.id)
         print(f"Aprovação autorizada: nickname={nickname}, aprovador={payload.member.name}, idAprovador={payload.member.id}, idMensagem={message.id}")
+        if add_whitelist(nickname):
+            await channel.send(f"{message.author.mention} adicionado na whitelist por {payload.member.name}")
+            await message.delete()
+        else:
+            await channel.send(f"{message.author.mention} já está na whitelist")
+            await message.delete()
 
 def validate_nickname(nickname):
     result = re.fullmatch(r"[A-Za-z0-9_]{3,16}", nickname)
@@ -86,6 +83,23 @@ def validate_token(token):
     else:
         print("Token não encontrado")
         return False
+
+def add_whitelist(nickname):
+    response_add = ""
+    if rcon_host != '' and rcon_port is not None and rcon_password != '':
+        rcon = RCONClient (rcon_host, rcon_port)
+        try:
+            if rcon.login(rcon_password):
+                response_add = rcon.command(f"whitelist add {nickname}")
+        finally:
+            rcon.stop()
+    else:
+        print("Senha, porta ou host inválidos")
+    if "Added" in response_add:
+        return True
+    else:
+        return False
+
 
 if validate_token(token_bot):
     client.run(token_bot)
